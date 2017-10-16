@@ -160,4 +160,14 @@ class Redis {
 		return $this;
 	}
 
+	/**
+	 * CLEAR
+	 *
+	 * @return $this
+	 */
+	public function clear() {
+		$this->_oRedis->clear();
+		return $this;
+	}
+
 }
