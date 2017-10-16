@@ -1,0 +1,28 @@
+{
+    "name": "coercive/cache",
+    "type": "library",
+    "description": "Coercive Utility Cache",
+    "homepage": "http://coercive.fr",
+    "license": "GNU",
+    "authors": [
+        {
+            "name": "Anthony Moral",
+            "email": "contact@coercive.fr",
+            "homepage": "http://coercive.fr"
+        }
+    ],
+    "require": {
+        "php": ">=7",
+        "symfony/cache": "^3.3"
+    },
+    "require-dev": {},
+    "autoload": {
+        "psr-4": { "Coercive\\Utility\\Cache\\": "" }
+    },
+    "minimum-stability" : "dev",
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        }
+    }
+}
