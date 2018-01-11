@@ -17,6 +17,21 @@ use Symfony\Component\Cache\Adapter\RedisAdapter;
  */
 class Redis {
 
+	/**
+	 * Redis error : Cache key contains reserved characters {}()/\@:
+	 * Replace by decimal code &#...;
+	 */
+	const RESERVED_CHARS = [
+		'#123' => '{',
+		'#125' => '}',
+		'#40' => '(',
+		'#41' => ')',
+		'#47' => '/',
+		'#92' => '\\',
+		'#64' => '@',
+		'#58' => ':',
+	];
+
 	/** @var \Redis|\Predis\Client */
 	private $_oConnection = null;
 
@@ -34,6 +49,19 @@ class Redis {
 
 	/** @var DateInterval */
 	private $_oExpireDelay = null;
+
+	/**
+	 * CLEAN KEY
+	 *
+	 * @param string $sKey
+	 */
+	private function _cleanKey(&$sKey) {
+
+		foreach (self::RESERVED_CHARS as $sDecId => $sChar) {
+			$sKey = str_replace($sChar, $sDecId, $sKey);
+		}
+
+	}
 
 	/**
 	 * Redis constructor.
@@ -57,7 +85,7 @@ class Redis {
 
 		}
 
-		# BACKUP
+			# BACKUP
 		catch(Exception $oException) {
 
 			$this->_bConnectionError = true;
@@ -103,10 +131,13 @@ class Redis {
 	 */
 	public function get($sName) {
 
-		# Clear
-		$this->_bGetError = false;
-
 		try {
+			# Clear
+			$this->_bGetError = false;
+
+			# Delete {}()/\@:
+			$this->_cleanKey($sName);
+
 			# Init cache item
 			$oCache = $this->_oRedis->getItem($sName);
 
@@ -132,13 +163,16 @@ class Redis {
 	 */
 	public function set($sName, $mDatas, $sTime = '') {
 
-		# Clear
-		$this->_bSetError = false;
-
-		# Expire Delay
-		$oDelay = $sTime ? new DateInterval($sTime) : $this->_oExpireDelay;
-
 		try {
+			# Clear
+			$this->_bSetError = false;
+
+			# Expire Delay
+			$oDelay = $sTime ? new DateInterval($sTime) : $this->_oExpireDelay;
+
+			# Delete {}()/\@:
+			$this->_cleanKey($sName);
+
 			# Init cache item
 			$oCache = $this->_oRedis->getItem($sName);
 
