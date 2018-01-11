@@ -33,10 +33,13 @@ class Redis {
 	];
 
 	/** @var \Redis|\Predis\Client */
-	private $_oConnection = null;
+	private $connection = null;
 
 	/** @var RedisAdapter */
-	private $_oRedis = null;
+	private $redis = null;
+
+	/** @var DateInterval Cache expire delay */
+	private $delay = null;
 
 	/** @var bool */
 	private $_bConnectionError = false;
@@ -47,51 +50,40 @@ class Redis {
 	/** @var bool */
 	private $_bSetError = false;
 
-	/** @var DateInterval */
-	private $_oExpireDelay = null;
-
 	/**
 	 * CLEAN KEY
 	 *
-	 * @param string $sKey
+	 * @param string $key
 	 */
-	private function _cleanKey(&$sKey) {
-
+	private function clean(string &$key)
+	{
 		foreach (self::RESERVED_CHARS as $sDecId => $sChar) {
-			$sKey = str_replace($sChar, $sDecId, $sKey);
+			$key = str_replace($sChar, $sDecId, $key);
 		}
-
 	}
 
 	/**
 	 * Redis constructor.
 	 *
-	 * @param string $sNamespace
-	 * @param string $sDsn [optional]
-	 * @param array $aOptions [optional]
+	 * @param string $namespace
+	 * @param string $dsn [optional]
+	 * @param array $options [optional]
 	 */
-	public function __construct($sNamespace, $sDsn = 'redis://localhost', $aOptions = []) {
-
+	public function __construct(string $namespace, string $dsn = 'redis://localhost', $options = [])
+	{
 		try {
-
 			# CREATE REDIS CONNEXION
-			$this->_oConnection = RedisAdapter::createConnection($sDsn, $aOptions);
+			$this->connection = RedisAdapter::createConnection($dsn, $options);
 
 			# INIT CACHE
-			$this->_oRedis = new RedisAdapter($this->_oConnection, strtolower($sNamespace));
+			$this->redis = new RedisAdapter($this->connection, strtolower($namespace));
 
 			# INIT DELAY
 			$this->setExpireDelay();
-
 		}
-
-			# BACKUP
-		catch(Exception $oException) {
-
+		catch(Exception $e) {
 			$this->_bConnectionError = true;
-
 		}
-
 	}
 
 	/**
@@ -99,8 +91,9 @@ class Redis {
 	 *
 	 * @return bool
 	 */
-	public function isConnected() {
-		return null !== $this->_oConnection && null !== $this->_oRedis && !$this->_bConnectionError;
+	public function isConnected(): bool
+	{
+		return null !== $this->connection && null !== $this->redis && !$this->_bConnectionError;
 	}
 
 	/**
@@ -108,89 +101,87 @@ class Redis {
 	 *
 	 * @return bool
 	 */
-	public function isError() {
+	public function isError(): bool
+	{
 		return $this->_bConnectionError || $this->_bGetError || $this->_bSetError;
 	}
 
 	/**
 	 * SET EXPIRE DELAY
 	 *
-	 * @param string $sDateIntervalDelay [optional]
+	 * @param string $delay [optional]
 	 * @return $this
 	 */
-	public function setExpireDelay($sDateIntervalDelay = 'PT15M') {
-		$this->_oExpireDelay = new DateInterval($sDateIntervalDelay);
+	public function setExpireDelay(string $delay = 'PT15M'): Redis
+	{
+		$this->delay = new DateInterval($delay);
 		return $this;
 	}
 
 	/**
 	 * GET
 	 *
-	 * @param string $sName
+	 * @param string $key
 	 * @return mixed|null
 	 */
-	public function get($sName) {
+	public function get(string $key)
+	{
+		# Clear
+		$this->_bGetError = false;
+
+		# Delete {}()/\@:
+		$this->clean($key);
 
 		try {
-			# Clear
-			$this->_bGetError = false;
-
-			# Delete {}()/\@:
-			$this->_cleanKey($sName);
-
 			# Init cache item
-			$oCache = $this->_oRedis->getItem($sName);
+			$cache = $this->redis->getItem($key);
 
-			# Tr retrieve datas or null
-			return $oCache->isHit() ? $oCache->get() : null;
+			# Try retrieve datas or null
+			return $cache->isHit() ? $cache->get() : null;
 		}
 		catch(Exception $oException) {
-
 			$this->_bGetError = true;
 			return null;
-
 		}
-
 	}
 
 	/**
 	 * SET
 	 *
-	 * @param string $sName
-	 * @param mixed $mDatas
-	 * @param string $sTime [optional]
+	 * @param string $key
+	 * @param mixed $data
+	 * @param string $delay [optional]
 	 * @return $this
 	 */
-	public function set($sName, $mDatas, $sTime = '') {
+	public function set(string $key, $data, $delay = ''): Redis
+	{
+		# Clear
+		$this->_bSetError = false;
+
+		# Expire Delay
+		$expire = $delay ? new DateInterval($delay) : $this->delay;
+
+		# Delete {}()/\@:
+		$this->clean($key);
 
 		try {
-			# Clear
-			$this->_bSetError = false;
-
-			# Expire Delay
-			$oDelay = $sTime ? new DateInterval($sTime) : $this->_oExpireDelay;
-
-			# Delete {}()/\@:
-			$this->_cleanKey($sName);
-
 			# Init cache item
-			$oCache = $this->_oRedis->getItem($sName);
+			$cache = $this->redis->getItem($key);
 
 			# Set datas
-			$oCache->set($mDatas);
+			$cache->set($data);
 
 			# Set expire delay
-			$oCache->expiresAfter($oDelay);
+			$cache->expiresAfter($expire);
 
 			# Save
-			$this->_oRedis->save($oCache);
+			$this->redis->save($cache);
 		}
-		catch(Exception $oException) {
-
+		catch(Exception $e) {
 			$this->_bSetError = true;
-
 		}
 
+		# Maintain chainability
 		return $this;
 	}
 
@@ -199,8 +190,9 @@ class Redis {
 	 *
 	 * @return $this
 	 */
-	public function clear() {
-		$this->_oRedis->clear();
+	public function clear(): Redis
+	{
+		$this->redis->clear();
 		return $this;
 	}
 
