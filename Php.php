@@ -6,7 +6,7 @@ use Exception;
 use DateInterval;
 
 /**
- * JSON CACHE
+ * PHP CACHE
  *
  * @package		Coercive\Utility\Cache
  * @link		@link https://github.com/Coercive/Cache
@@ -15,7 +15,7 @@ use DateInterval;
  * @copyright   (c) 2017 - 2018 Anthony Moral
  * @license 	http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
  */
-class Json {
+class Php {
 
 	/** @var string Cache filepath */
 	private $path = '';
@@ -44,7 +44,7 @@ class Json {
 	}
 
 	/**
-	 * Json constructor.
+	 * Php constructor.
 	 *
 	 * @param string $path
 	 * @param string $delay [optional]
@@ -86,7 +86,7 @@ class Json {
 	 * @param string $delay [optional] Date interval format
 	 * @return $this
 	 */
-	public function setExpireDelay(string $delay = 'PT15M'): Json
+	public function setExpireDelay(string $delay = 'PT15M'): Php
 	{
 		$this->delay = new DateInterval($delay);
 		return $this;
@@ -107,25 +107,21 @@ class Json {
 		$this->clean($key);
 
 		# Filepath
-		$path = $this->path . DIRECTORY_SEPARATOR . $key . '.json';
+		$path = $this->path . DIRECTORY_SEPARATOR . $key . '.php';
 		if (!is_file($path)) { return null; }
 
 		try {
-			# Read datas
-			$read = file_get_contents($path);
-			if(!$read) { throw new Exception("File content error : $path"); }
-
-			# Decode
-			$data = json_decode($read, true);
+			# Load
+			@include $path;
 
 			# Cache expire
-			if (!isset($data['expire']) || time() > $data['expire']) {
+			if (!isset($expire) || time() > $expire) {
 				unlink($path);
 				return null;
 			}
 
 			# Get value
-			return $data['value'] ?? null;
+			return $value ?? null;
 		}
 		catch(Exception $oException) {
 			$this->_bGetError = true;
@@ -141,7 +137,7 @@ class Json {
 	 * @param string $delay [optional]
 	 * @return $this
 	 */
-	public function set(string $key, $data, string $delay = ''): Json
+	public function set(string $key, $data, string $delay = ''): Php
 	{
 		# Clear
 		$this->_bSetError = false;
@@ -150,8 +146,8 @@ class Json {
 		$this->clean($key);
 
 		# Filepath
-		$path = $this->path . DIRECTORY_SEPARATOR . $key . '.json';
-		$tmp = $this->path . DIRECTORY_SEPARATOR . $key . '.json' . uniqid('_temp_', true);
+		$path = $this->path . DIRECTORY_SEPARATOR . $key . '.php';
+		$tmp = $this->path . DIRECTORY_SEPARATOR . $key . '.php' . uniqid('_temp_', true);
 
 		# Expire Delay
 		$expire = (new DateTime)
@@ -160,10 +156,16 @@ class Json {
 
 		try {
 			# Encode
-			$json = json_encode(['expire' => $expire, 'value' => $data]);
+			$export = var_export($data, true);
+
+			# HHVM fails at __set_state, so just use object cast for now
+			$export = str_replace('stdClass::__set_state', '(object)', $export);
+
+			# To php format
+			$php = '<?php $value=' . $export . ';' . '$expire=' . $expire . ';';
 
 			# Write to temp file first to ensure atomicity
-			if (!file_put_contents($tmp, $json, LOCK_EX)) {
+			if (!file_put_contents($tmp, $php, LOCK_EX)) {
 				throw new Exception("Can't write data in file : $tmp");
 			}
 			rename($tmp, $path);
@@ -185,7 +187,7 @@ class Json {
 	 * @param string $key
 	 * @return $this
 	 */
-	public function delete(string $key): Json
+	public function delete(string $key): Php
 	{
 		# Clean key
 		$this->clean($key);
@@ -206,7 +208,7 @@ class Json {
 	 *
 	 * @return $this
 	 */
-	public function clear(): Json
+	public function clear(): Php
 	{
 		# Get all files (even hidden)
 		$files = glob($this->path . '/{,.}*', GLOB_BRACE);
