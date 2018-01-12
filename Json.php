@@ -163,6 +163,7 @@ class Json {
 			$json = json_encode(['expire' => $expire, 'value' => $data]);
 
 			# Write to temp file first to ensure atomicity
+			// @link https://blogs.msdn.microsoft.com/adioltean/2005/12/28/how-to-do-atomic-writes-in-a-file
 			if (!file_put_contents($tmp, $json, LOCK_EX)) {
 				throw new Exception("Can't write data in file : $tmp");
 			}
