@@ -186,6 +186,40 @@ class Redis {
 	}
 
 	/**
+	 * DELETE
+	 *
+	 * @return $this
+	 */
+	public function delete(string $key): Redis
+	{
+		# Clear
+		$this->_bSetError = false;
+
+		# Delete {}()/\@:
+		$this->clean($key);
+		
+		try {
+			# Init cache item
+			$cache = $this->redis->getItem($key);
+
+			# Set datas
+			$cache->set(null);
+
+			# Set expire delay
+			$cache->expiresAfter(0);
+
+			# Save
+			$this->redis->save($cache);
+		}
+		catch(Exception $e) {
+			$this->_bSetError = true;
+		}
+
+		# Maintain chainability
+		return $this;
+	}
+
+	/**
 	 * CLEAR
 	 *
 	 * @return $this
