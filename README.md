@@ -37,6 +37,14 @@ $redis->clear()
 
 # You can check if there is an error
 if($redis->isError()) { ... }
+
+# You can enable/disable the cache
+$redis->disable()
+$redis->enable()
+$redis->setState(bool)
+
+# If cache disable
+$redis->get('data-key') => return null
 ```
 
 JSON
@@ -69,6 +77,14 @@ $json->clear()
 
 # You can check if there is an error
 if($json->isError()) { ... }
+
+# You can enable/disable the cache
+$json->disable()
+$json->enable()
+$json->setState(bool)
+
+# If cache disable
+$json->get('data-key') => return null
 ```
 
 PHP
@@ -101,4 +117,12 @@ $php->clear()
 
 # You can check if there is an error
 if($php->isError()) { ... }
+
+# You can enable/disable the cache
+$php->disable()
+$php->enable()
+$php->setState(bool)
+
+# If cache disable
+$php->get('data-key') => return null
 ```
