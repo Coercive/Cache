@@ -15,8 +15,8 @@ use DateInterval;
  * @copyright   (c) 2017 - 2018 Anthony Moral
  * @license 	http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
  */
-class Json {
-
+class Json
+{
 	/** @var string Cache filepath */
 	private $path = '';
 
@@ -31,6 +31,9 @@ class Json {
 
 	/** @var bool Setter error */
 	private $_bSetError = false;
+
+	/** @var bool Enable cache system */
+	private $state = false;
 
 	/**
 	 * CLEAN KEY
@@ -64,10 +67,57 @@ class Json {
 				}
 				$this->path = realpath($path);
 			}
+
+			# Enable cache
+			$this->enable();
 		}
 		catch(Exception $oException) {
 			$this->_bLoadError = true;
 		}
+	}
+
+	/**
+	 * Verify if cache system is active
+	 *
+	 * @return bool
+	 */
+	public function isEnable(): bool
+	{
+		return $this->state;
+	}
+
+	/**
+	 * Enable cache system
+	 *
+	 * @return Json
+	 */
+	public function enable(): Json
+	{
+		$this->state = true;
+		return $this;
+	}
+
+	/**
+	 * Disable cache system
+	 *
+	 * @return Json
+	 */
+	public function disable(): Json
+	{
+		$this->state = false;
+		return $this;
+	}
+
+	/**
+	 * Enable/Disable cache system
+	 *
+	 * @param bool $state
+	 * @return Json
+	 */
+	public function setState(bool $state): Json
+	{
+		$this->state = $state;
+		return $this;
 	}
 
 	/**
@@ -102,6 +152,9 @@ class Json {
 	{
 		# Clear
 		$this->_bGetError = false;
+
+		# Cache disable
+		if(!$this->isEnable()) { return null; }
 
 		# Clean key
 		$this->clean($key);
@@ -146,6 +199,9 @@ class Json {
 		# Clear
 		$this->_bSetError = false;
 
+		# Cache disable
+		if(!$this->isEnable()) { return $this; }
+
 		# Clean key
 		$this->clean($key);
 
@@ -188,6 +244,9 @@ class Json {
 	 */
 	public function delete(string $key): Json
 	{
+		# Cache disable
+		if(!$this->isEnable()) { return $this; }
+
 		# Clean key
 		$this->clean($key);
 
@@ -209,6 +268,9 @@ class Json {
 	 */
 	public function clear(): Json
 	{
+		# Cache disable
+		if(!$this->isEnable()) { return $this; }
+
 		# Get all files (even hidden)
 		$files = glob($this->path . '/{,.}*', GLOB_BRACE);
 
@@ -220,5 +282,4 @@ class Json {
 		# Maintain chainability
 		return $this;
 	}
-
 }

@@ -32,6 +32,9 @@ class Php {
 	/** @var bool Setter error */
 	private $_bSetError = false;
 
+	/** @var bool Enable cache system */
+	private $state = false;
+
 	/**
 	 * CLEAN KEY
 	 *
@@ -64,10 +67,57 @@ class Php {
 				}
 				$this->path = realpath($path);
 			}
+
+			# Enable cache
+			$this->enable();
 		}
 		catch(Exception $oException) {
 			$this->_bLoadError = true;
 		}
+	}
+
+	/**
+	 * Verify if cache system is active
+	 *
+	 * @return bool
+	 */
+	public function isEnable(): bool
+	{
+		return $this->state;
+	}
+
+	/**
+	 * Enable cache system
+	 *
+	 * @return Php
+	 */
+	public function enable(): Php
+	{
+		$this->state = true;
+		return $this;
+	}
+
+	/**
+	 * Disable cache system
+	 *
+	 * @return Php
+	 */
+	public function disable(): Php
+	{
+		$this->state = false;
+		return $this;
+	}
+
+	/**
+	 * Enable/Disable cache system
+	 *
+	 * @param bool $state
+	 * @return Php
+	 */
+	public function setState(bool $state): Php
+	{
+		$this->state = $state;
+		return $this;
 	}
 
 	/**
@@ -102,6 +152,9 @@ class Php {
 	{
 		# Clear
 		$this->_bGetError = false;
+
+		# Cache disable
+		if(!$this->isEnable()) { return null; }
 
 		# Clean key
 		$this->clean($key);
@@ -141,6 +194,9 @@ class Php {
 	{
 		# Clear
 		$this->_bSetError = false;
+
+		# Cache disable
+		if(!$this->isEnable()) { return $this; }
 
 		# Clean key
 		$this->clean($key);
@@ -189,6 +245,9 @@ class Php {
 	 */
 	public function delete(string $key): Php
 	{
+		# Cache disable
+		if(!$this->isEnable()) { return $this; }
+
 		# Clean key
 		$this->clean($key);
 

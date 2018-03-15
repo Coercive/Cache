@@ -50,6 +50,9 @@ class Redis {
 	/** @var bool */
 	private $_bSetError = false;
 
+	/** @var bool Enable cache system */
+	private $state = false;
+
 	/**
 	 * CLEAN KEY
 	 *
@@ -80,10 +83,57 @@ class Redis {
 
 			# INIT DELAY
 			$this->setExpireDelay();
+
+			# Enable cache
+			$this->enable();
 		}
 		catch(Exception $e) {
 			$this->_bConnectionError = true;
 		}
+	}
+
+	/**
+	 * Verify if cache system is active
+	 *
+	 * @return bool
+	 */
+	public function isEnable(): bool
+	{
+		return $this->state;
+	}
+
+	/**
+	 * Enable cache system
+	 *
+	 * @return Redis
+	 */
+	public function enable(): Redis
+	{
+		$this->state = true;
+		return $this;
+	}
+
+	/**
+	 * Disable cache system
+	 *
+	 * @return Redis
+	 */
+	public function disable(): Redis
+	{
+		$this->state = false;
+		return $this;
+	}
+
+	/**
+	 * Enable/Disable cache system
+	 *
+	 * @param bool $state
+	 * @return Redis
+	 */
+	public function setState(bool $state): Redis
+	{
+		$this->state = $state;
+		return $this;
 	}
 
 	/**
@@ -129,6 +179,9 @@ class Redis {
 		# Clear
 		$this->_bGetError = false;
 
+		# Cache disable
+		if(!$this->isEnable()) { return null; }
+
 		# Delete {}()/\@:
 		$this->clean($key);
 
@@ -157,6 +210,9 @@ class Redis {
 	{
 		# Clear
 		$this->_bSetError = false;
+
+		# Cache disable
+		if(!$this->isEnable()) { return $this; }
 
 		# Expire Delay
 		$expire = $delay ? new DateInterval($delay) : $this->delay;
@@ -195,6 +251,9 @@ class Redis {
 		# Clear
 		$this->_bSetError = false;
 
+		# Cache disable
+		if(!$this->isEnable()) { return $this; }
+
 		# Delete {}()/\@:
 		$this->clean($key);
 		
@@ -226,7 +285,10 @@ class Redis {
 	 */
 	public function clear(): Redis
 	{
-		$this->redis->clear();
+		# Cache enable
+		if($this->isEnable()) { $this->redis->clear(); }
+
+		# Maintain chainability
 		return $this;
 	}
 
