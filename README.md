@@ -126,3 +126,55 @@ $php->setState(bool)
 # If cache disable
 $php->get('data-key') => return null
 ```
+
+RAW
+---
+```php
+use Coercive\Utility\Cache
+
+# Load your cache instance for a defined project
+$raw = new Raw('/temp/my_project_directory', true)
+
+# Retrieve your data
+$data = $raw->get('data-key')
+
+# Retrieve timestamp
+$int = $raw->filemtime();
+
+# Save your data
+$raw->set('data-key', 'your-data')
+
+# Delete specific data
+$raw->delete('data-key')
+
+# Empty cache
+$raw->clear()
+
+# You can enable/disable the cache
+$raw->disable()
+$raw->enable()
+$raw->setState(bool)
+```
+
+Full example
+```php
+$raw = new Raw('/temp/my_project_directory', true);
+$raw->enable();
+
+$arr['test'] = range(0,100);
+
+$raw->set('test', serialize($arr));
+
+var_dump( unserialize($raw->get('test')) );
+
+echo '<br /><br />';
+
+$raw->set('_temp', serialize($arr));
+
+var_dump( unserialize($raw->get('_temp')) );
+
+echo '<br /><br />';
+$raw->clear('_*');
+
+var_dump( unserialize($raw->get('_temp')) );
+```
