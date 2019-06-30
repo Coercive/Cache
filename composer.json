@@ -16,12 +16,12 @@
         }
     ],
     "require": {
-        "php": ">=7",
+        "php": ">=7.1",
         "symfony/cache": "^3.3"
     },
     "require-dev": {},
     "autoload": {
-        "psr-4": { "Coercive\\Utility\\Cache\\": "" }
+        "psr-4": { "Coercive\\Utility\\Cache\\": "/dist" }
     },
     "minimum-stability" : "dev",
     "extra": {
