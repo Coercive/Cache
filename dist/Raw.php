@@ -191,7 +191,7 @@ class Raw
 
 		# Delete all files (even hidden)
 		$files = glob($this->path . '/' . $glob, GLOB_BRACE);
-		foreach($files as $file) { unlink($file); }
+		foreach($files as $file) { @unlink($file); }
 		return $this;
 	}
 }
