@@ -9,15 +9,16 @@ use DateInterval;
  * JSON CACHE
  *
  * @package		Coercive\Utility\Cache
- * @link		@link https://github.com/Coercive/Cache
+ * @link		https://github.com/Coercive/Cache
  *
  * @author  	Anthony Moral <contact@coercive.fr>
- * @copyright   (c) 2017 - 2018 Anthony Moral
- * @license 	http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
+ * @copyright   (c) 2020 Anthony Moral
+ * @license 	MIT
  */
 class Json
 {
 	/** @var string Cache filepath */
+	private $source = '';
 	private $path = '';
 
 	/** @var DateInterval Expire delay */
@@ -49,27 +50,17 @@ class Json
 	/**
 	 * Json constructor.
 	 *
-	 * @param string $path
+	 * @param string $path [optional]
 	 * @param string $delay [optional]
 	 */
-	public function __construct(string $path, $delay = 'P7D')
+	public function __construct(string $path, string $delay = 'P7D')
 	{
 		try {
 			# Set global default delay
 			$this->setExpireDelay($delay);
 
 			# Set the cache filepath
-			$this->path = realpath($path);
-			if (!is_dir($this->path)) {
-				# Create directory
-				if (!@mkdir($path, 0777, true)) {
-					throw new Exception("Can't create cache directory : $path");
-				}
-				$this->path = realpath($path);
-			}
-
-			# Enable cache
-			$this->enable();
+			$this->source = $path;
 		}
 		catch(Exception $oException) {
 			$this->_bLoadError = true;
@@ -90,10 +81,11 @@ class Json
 	 * Enable cache system
 	 *
 	 * @return Json
+	 * @throws Exception
 	 */
 	public function enable(): Json
 	{
-		$this->state = true;
+		$this->setState(true);
 		return $this;
 	}
 
@@ -101,10 +93,11 @@ class Json
 	 * Disable cache system
 	 *
 	 * @return Json
+	 * @throws Exception
 	 */
 	public function disable(): Json
 	{
-		$this->state = false;
+		$this->setState(false);
 		return $this;
 	}
 
@@ -113,10 +106,20 @@ class Json
 	 *
 	 * @param bool $state
 	 * @return Json
+	 * @throws Exception
 	 */
 	public function setState(bool $state): Json
 	{
 		$this->state = $state;
+		if($state) {
+			$this->path = realpath($this->source);
+			if (!is_dir($this->path)) {
+				if (!@mkdir($this->source, 0777, true)) {
+					throw new Exception("Can't create cache directory : {$this->source}");
+				}
+				$this->path = realpath($this->source);
+			}
+		}
 		return $this;
 	}
 
@@ -135,8 +138,9 @@ class Json
 	 *
 	 * @param string $delay [optional] Date interval format
 	 * @return $this
+	 * @throws Exception
 	 */
-	public function setExpireDelay(string $delay = 'PT15M'): Json
+	public function setExpireDelay(string $delay = 'P7D'): Json
 	{
 		$this->delay = new DateInterval($delay);
 		return $this;
@@ -154,14 +158,18 @@ class Json
 		$this->_bGetError = false;
 
 		# Cache disable
-		if(!$this->isEnable()) { return null; }
+		if(!$this->isEnable()) {
+			return null;
+		}
 
 		# Clean key
 		$this->clean($key);
 
 		# Filepath
 		$path = $this->path . DIRECTORY_SEPARATOR . $key . '.json';
-		if (!is_file($path)) { return null; }
+		if (!is_file($path)) {
+			return null;
+		}
 
 		try {
 			# Read datas
@@ -193,6 +201,7 @@ class Json
 	 * @param mixed $data
 	 * @param string $delay [optional]
 	 * @return $this
+	 * @throws Exception
 	 */
 	public function set(string $key, $data, string $delay = ''): Json
 	{
@@ -200,7 +209,9 @@ class Json
 		$this->_bSetError = false;
 
 		# Cache disable
-		if(!$this->isEnable()) { return $this; }
+		if(!$this->isEnable()) {
+			return $this;
+		}
 
 		# Clean key
 		$this->clean($key);
@@ -252,7 +263,9 @@ class Json
 
 		# Filepath
 		$path = $this->path . DIRECTORY_SEPARATOR . $key . '.json';
-		if (!is_file($path)) { return $this; }
+		if (!is_file($path)) {
+			return $this;
+		}
 
 		# Delete
 		unlink($path);
@@ -269,7 +282,9 @@ class Json
 	public function clear(): Json
 	{
 		# Cache disable
-		if(!$this->isEnable()) { return $this; }
+		if(!$this->isEnable()) {
+			return $this;
+		}
 
 		# Get all files (even hidden)
 		$files = glob($this->path . '/{,.}*', GLOB_BRACE);

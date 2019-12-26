@@ -9,15 +9,16 @@ use DateInterval;
  * PHP CACHE
  *
  * @package		Coercive\Utility\Cache
- * @link		@link https://github.com/Coercive/Cache
+ * @link		https://github.com/Coercive/Cache
  *
  * @author  	Anthony Moral <contact@coercive.fr>
- * @copyright   (c) 2017 - 2018 Anthony Moral
- * @license 	http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
+ * @copyright   (c) 2020 Anthony Moral
+ * @license 	MIT
  */
 class Php {
 
 	/** @var string Cache filepath */
+	private $source = '';
 	private $path = '';
 
 	/** @var DateInterval Expire delay */
@@ -59,17 +60,7 @@ class Php {
 			$this->setExpireDelay($delay);
 
 			# Set the cache filepath
-			$this->path = realpath($path);
-			if (!is_dir($this->path)) {
-				# Create directory
-				if (!@mkdir($path, 0777, true)) {
-					throw new Exception("Can't create cache directory : $path");
-				}
-				$this->path = realpath($path);
-			}
-
-			# Enable cache
-			$this->enable();
+			$this->source = $path;
 		}
 		catch(Exception $oException) {
 			$this->_bLoadError = true;
@@ -113,10 +104,20 @@ class Php {
 	 *
 	 * @param bool $state
 	 * @return Php
+	 * @throws Exception
 	 */
 	public function setState(bool $state): Php
 	{
 		$this->state = $state;
+		if($state) {
+			$this->path = realpath($this->source);
+			if (!is_dir($this->path)) {
+				if (!@mkdir($this->source, 0777, true)) {
+					throw new Exception("Can't create cache directory : {$this->source}");
+				}
+				$this->path = realpath($this->source);
+			}
+		}
 		return $this;
 	}
 
@@ -135,6 +136,7 @@ class Php {
 	 *
 	 * @param string $delay [optional] Date interval format
 	 * @return $this
+	 * @throws Exception
 	 */
 	public function setExpireDelay(string $delay = 'PT15M'): Php
 	{
@@ -189,6 +191,7 @@ class Php {
 	 * @param mixed $data
 	 * @param string $delay [optional]
 	 * @return $this
+	 * @throws Exception
 	 */
 	public function set(string $key, $data, string $delay = ''): Php
 	{
@@ -280,5 +283,4 @@ class Php {
 		# Maintain chainability
 		return $this;
 	}
-
 }

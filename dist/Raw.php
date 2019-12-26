@@ -2,13 +2,12 @@
 namespace Coercive\Utility\Cache;
 
 use Exception;
-use DateInterval;
 
 /**
  * RAW CACHE
  *
  * @package		Coercive\Utility\Cache
- * @link		@link https://github.com/Coercive/Cache
+ * @link		https://github.com/Coercive/Cache
  *
  * @author  	Anthony Moral <contact@coercive.fr>
  * @copyright   2019
