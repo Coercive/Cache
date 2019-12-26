@@ -109,7 +109,7 @@ class Php {
 	public function setState(bool $state): Php
 	{
 		$this->state = $state;
-		if($state) {
+		if($state && !$this->path) {
 			$this->path = realpath($this->source);
 			if (!is_dir($this->path)) {
 				if (!@mkdir($this->source, 0777, true)) {
