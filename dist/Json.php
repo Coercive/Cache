@@ -15,25 +15,16 @@ use DateInterval;
  * @copyright   (c) 2022 Anthony Moral
  * @license 	MIT
  */
-class Json
+class Json extends AbstractCache
 {
-	/** @var string Cache filepath */
+	/** @var string Cache filepath (source) */
 	private string $source;
 
-	/** @var string Cache filepath */
+	/** @var string Cache filepath (prepared) */
 	private string $path = '';
 
-	/** @var DateInterval Expire delay */
-	private DateInterval $delay;
-
-	/** @var Exception|null Class load error */
-	private ? Exception $_LoadException = null;
-
-	/** @var Exception|null Getter error */
-	private ? Exception $_GetException = null;
-
-	/** @var Exception|null Setter error */
-	private ? Exception $_SetException = null;
+	/** @var string Global Expire delay */
+	private string $delay;
 
 	/** @var bool Enable cache system */
 	private bool $enabled = false;
@@ -58,16 +49,11 @@ class Json
 	 */
 	public function __construct(string $path, string $delay = 'P7D')
 	{
-		try {
-			# Set global default delay
-			$this->setExpireDelay($delay);
+		# Set the cache filepath
+		$this->source = $path;
 
-			# Set the cache filepath
-			$this->source = $path;
-		}
-		catch(Exception $e) {
-			$this->_LoadException = $e;
-		}
+		# Set global default delay
+		$this->setExpireDelay($delay);
 	}
 
 	/**
@@ -83,90 +69,50 @@ class Json
 	/**
 	 * Enable cache system
 	 *
-	 * @return Json
-	 * @throws Exception
+	 * @return bool
 	 */
-	public function enable(): Json
+	public function enable(): bool
 	{
-		$this->setStatus(true);
-		return $this;
+		return $this->setStatus(true);
 	}
 
 	/**
 	 * Disable cache system
 	 *
-	 * @return Json
-	 * @throws Exception
+	 * @return bool
 	 */
-	public function disable(): Json
+	public function disable(): bool
 	{
-		$this->setStatus(false);
-		return $this;
+		return $this->setStatus(false);
 	}
 
 	/**
 	 * Enable/Disable cache system
 	 *
 	 * @param bool $enable
-	 * @return Json
-	 * @throws Exception
+	 * @return bool
 	 */
-	public function setStatus(bool $enable): Json
+	public function setStatus(bool $enable): bool
 	{
 		$this->enabled = $enable;
 		if($enable && !$this->path) {
 			if(!$this->source) {
-				throw new Exception('Cache directory is not set.');
+				$this->addException(new Exception('Cache directory is not set.'));
+				return false;
 			}
 			if(!is_dir($this->source)) {
 				if(!mkdir($this->source, 0777, true)) {
-					throw new Exception('Can\'t create cache directory: ' . $this->source);
+					$this->addException(new Exception('Can\'t create cache directory: ' . $this->source));
+					return false;
 				}
 			}
 			$this->path = (string) realpath($this->source);
 			if(!$this->path) {
-				throw new Exception('Can\'t use realpath cache directory: ' . $this->source);
+				$this->addException(new Exception('Can\'t use realpath cache directory: ' . $this->source));
+				return false;
 			}
 		}
-		return $this;
-	}
-
-	/**
-	 * ERROR
-	 *
-	 * @return bool
-	 */
-	public function isError(): bool
-	{
-		return $this->_LoadException || $this->_GetException || $this->_SetException;
-	}
-
-	/**
-	 * @return Exception|null
-	 */
-	public function getException(): ? Exception
-	{
-		if($this->_LoadException) {
-			return $this->_LoadException;
-		}
-		if($this->_GetException) {
-			return $this->_GetException;
-		}
-		if($this->_SetException) {
-			return $this->_SetException;
-		}
-		return null;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getErrorMessage(): string
-	{
-		if($e = $this->getException()) {
-			return $e->getMessage();
-		}
-		return '';
+		return true;
 	}
 
 	/**
@@ -174,11 +120,10 @@ class Json
 	 *
 	 * @param string $delay [optional] Date interval format
 	 * @return $this
-	 * @throws Exception
 	 */
 	public function setExpireDelay(string $delay = 'P7D'): Json
 	{
-		$this->delay = new DateInterval($delay);
+		$this->delay = $delay;
 		return $this;
 	}
 
@@ -190,9 +135,6 @@ class Json
 	 */
 	public function get(string $key)
 	{
-		# Clear
-		$this->_GetException = null;
-
 		# Cache disable
 		if(!$this->isEnable()) {
 			return null;
@@ -207,29 +149,24 @@ class Json
 			return null;
 		}
 
-		try {
-			# Read datas
-			$read = file_get_contents($path);
-			if(!$read) {
-				throw new Exception('File content error : ' . $path);
-			}
-
-			# Decode
-			$data = json_decode($read, true);
-
-			# Cache expire
-			if (!isset($data['expire']) || time() > $data['expire']) {
-				unlink($path);
-				return null;
-			}
-
-			# Get value
-			return $data['value'] ?? null;
-		}
-		catch(Exception $e) {
-			$this->_GetException = $e;
+		# Read datas
+		$read = file_get_contents($path);
+		if(!$read) {
+			$this->addException(new Exception('File content error : ' . $path));
 			return null;
 		}
+
+		# Decode
+		$data = json_decode($read, true);
+
+		# Cache expire
+		if (!isset($data['expire']) || time() > $data['expire']) {
+			unlink($path);
+			return null;
+		}
+
+		# Get value
+		return $data['value'] ?? null;
 	}
 
 	/**
@@ -242,9 +179,6 @@ class Json
 	 */
 	public function set(string $key, $data, string $delay = ''): Json
 	{
-		# Clear
-		$this->_SetException = null;
-
 		# Cache disable
 		if(!$this->isEnable()) {
 			return $this;
@@ -260,25 +194,27 @@ class Json
 		try {
 			# Expire Delay
 			$expire = (new DateTime)
-				->add($delay ? new DateInterval($delay) : $this->delay)
+				->add(new DateInterval($delay ?: $this->delay))
 				->getTimestamp();
-
-			# Encode
-			$json = json_encode(['expire' => $expire, 'value' => $data]);
-
-			# Write to temp file first to ensure atomicity
-			// @link https://blogs.msdn.microsoft.com/adioltean/2005/12/28/how-to-do-atomic-writes-in-a-file
-			if (!file_put_contents($tmp, $json, LOCK_EX)) {
-				throw new Exception("Can't write data in file : $tmp");
-			}
-			rename($tmp, $path);
-
-			# All access right for all
-			chmod($path, 0777);
 		}
 		catch(Exception $e) {
-			$this->_SetException = $e;
+			$this->addException($e);
+			return $this;
 		}
+
+		# Encode
+		$json = json_encode(['expire' => $expire, 'value' => $data]);
+
+		# Write to temp file first to ensure atomicity
+		// @link https://blogs.msdn.microsoft.com/adioltean/2005/12/28/how-to-do-atomic-writes-in-a-file
+		if (!file_put_contents($tmp, $json, LOCK_EX)) {
+			$this->addException(new Exception("Can't write data in file : $tmp"));
+			return $this;
+		}
+		rename($tmp, $path);
+
+		# All access right for all
+		chmod($path, 0777);
 
 		# Maintain chainability
 		return $this;
@@ -293,7 +229,9 @@ class Json
 	public function delete(string $key): Json
 	{
 		# Cache disable
-		if(!$this->isEnable()) { return $this; }
+		if(!$this->isEnable()) {
+			return $this;
+		}
 
 		# Clean key
 		$this->clean($key);

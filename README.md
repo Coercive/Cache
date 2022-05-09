@@ -1,54 +1,15 @@
-Coercive Utility Cache
-======================
+# Coercive Utility Cache
 
 Simple cache helpers.
 
-Get
----
+## Get
+
 ```
 composer require coercive/cache
 ```
 
-Redis
-----
-```php
-use Coercive\Utility\Cache
+## JSON
 
-# Load your redis instance for a defined project
-$redis = new Redis('myproject')
-
-# You can test if redis is ok
-if($redis->isConnected()) { ... }
-
-# Set a global default expire delay
-$redis->setExpireDelay('P1D')
-
-# Retrieve your data
-$data = $redis->get('data-key')
-
-# Save your data
-$redis->set('date-name', ['data1', 'data2'])
-
-# Save your data with specific expire delay
-$redis->set('date-name', ['data1', 'data2'], 'PT15M')
-
-# Empty cache
-$redis->clear()
-
-# You can check if there is an error
-if($redis->isError()) { ... }
-
-# You can enable/disable the cache
-$redis->disable()
-$redis->enable()
-$redis->setState(bool)
-
-# If cache disable
-$redis->get('data-key') => return null
-```
-
-JSON
-----
 ```php
 use Coercive\Utility\Cache
 
@@ -75,9 +36,6 @@ $json->delete('data-key')
 # Empty cache
 $json->clear()
 
-# You can check if there is an error
-if($json->isError()) { ... }
-
 # You can enable/disable the cache
 $json->disable()
 $json->enable()
@@ -87,8 +45,8 @@ $json->setState(bool)
 $json->get('data-key') => return null
 ```
 
-PHP
-----
+## PHP
+
 ```php
 use Coercive\Utility\Cache
 
@@ -115,9 +73,6 @@ $php->delete('data-key')
 # Empty cache
 $php->clear()
 
-# You can check if there is an error
-if($php->isError()) { ... }
-
 # You can enable/disable the cache
 $php->disable()
 $php->enable()
@@ -127,54 +82,18 @@ $php->setState(bool)
 $php->get('data-key') => return null
 ```
 
-RAW
----
+## Global
+
 ```php
 use Coercive\Utility\Cache
 
-# Load your cache instance for a defined project
-$raw = new Raw('/temp/my_project_directory', true)
+# Use debug method to handle exceptions
+$cache->debug(function($e) {
+    /** @var Exception $e */
+    echo $e->getMessage();
+    // do something
+});
 
-# Retrieve your data
-$data = $raw->get('data-key')
-
-# Retrieve timestamp
-$int = $raw->filemtime();
-
-# Save your data
-$raw->set('data-key', 'your-data')
-
-# Delete specific data
-$raw->delete('data-key')
-
-# Empty cache
-$raw->clear()
-
-# You can enable/disable the cache
-$raw->disable()
-$raw->enable()
-$raw->setState(bool)
-```
-
-Full example
-```php
-$raw = new Raw('/temp/my_project_directory', true);
-$raw->enable();
-
-$arr['test'] = range(0,100);
-
-$raw->set('test', serialize($arr));
-
-var_dump( unserialize($raw->get('test')) );
-
-echo '<br /><br />';
-
-$raw->set('_temp', serialize($arr));
-
-var_dump( unserialize($raw->get('_temp')) );
-
-echo '<br /><br />';
-$raw->clear('_*');
-
-var_dump( unserialize($raw->get('_temp')) );
+# You can also expose all exceptions
+var_dump($cache->getExceptions());
 ```

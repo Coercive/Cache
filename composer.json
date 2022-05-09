@@ -4,10 +4,6 @@
     "description": "Coercive Utility Cache",
     "homepage": "http://coercive.fr",
     "license": "MIT",
-    "licenses": [{
-      "type": "MIT",
-      "url": "https://github.com/Coercive/Cache/blob/master/LICENSE.txt"
-    }],
     "authors": [
         {
             "name": "Anthony Moral",
@@ -16,8 +12,7 @@
         }
     ],
     "require": {
-        "php": ">=7.0",
-        "symfony/cache": "^3.3",
+        "php": ">=7.4",
         "ext-json": "*"
     },
     "require-dev": {},
