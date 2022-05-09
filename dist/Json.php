@@ -239,7 +239,6 @@ class Json
 	 * @param mixed $data
 	 * @param string $delay [optional]
 	 * @return $this
-	 * @throws Exception
 	 */
 	public function set(string $key, $data, string $delay = ''): Json
 	{
@@ -258,12 +257,12 @@ class Json
 		$path = $this->path . DIRECTORY_SEPARATOR . $key . '.json';
 		$tmp = $this->path . DIRECTORY_SEPARATOR . $key . '.json' . uniqid('_temp_', true);
 
-		# Expire Delay
-		$expire = (new DateTime)
-			->add($delay ? new DateInterval($delay) : $this->delay)
-			->getTimestamp();
-
 		try {
+			# Expire Delay
+			$expire = (new DateTime)
+				->add($delay ? new DateInterval($delay) : $this->delay)
+				->getTimestamp();
+
 			# Encode
 			$json = json_encode(['expire' => $expire, 'value' => $data]);
 
