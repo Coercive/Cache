@@ -12,29 +12,31 @@ use DateInterval;
  * @link		https://github.com/Coercive/Cache
  *
  * @author  	Anthony Moral <contact@coercive.fr>
- * @copyright   (c) 2020 Anthony Moral
+ * @copyright   (c) 2022 Anthony Moral
  * @license 	MIT
  */
 class Json
 {
 	/** @var string Cache filepath */
-	private $source = '';
-	private $path = '';
+	private string $source;
+
+	/** @var string Cache filepath */
+	private string $path = '';
 
 	/** @var DateInterval Expire delay */
-	private $delay = null;
+	private DateInterval $delay;
 
-	/** @var bool Class load error */
-	private $_bLoadError = false;
+	/** @var Exception|null Class load error */
+	private ? Exception $_LoadException = null;
 
-	/** @var bool Getter error */
-	private $_bGetError = false;
+	/** @var Exception|null Getter error */
+	private ? Exception $_GetException = null;
 
-	/** @var bool Setter error */
-	private $_bSetError = false;
+	/** @var Exception|null Setter error */
+	private ? Exception $_SetException = null;
 
 	/** @var bool Enable cache system */
-	private $state = false;
+	private bool $enabled = false;
 
 	/**
 	 * CLEAN KEY
@@ -42,7 +44,7 @@ class Json
 	 * @param string $key
 	 * @return void
 	 */
-	private function clean(&$key)
+	private function clean(string &$key)
 	{
 		$key = preg_replace('`[^a-z0-9]+`i', '_', $key);
 	}
@@ -52,6 +54,7 @@ class Json
 	 *
 	 * @param string $path [optional]
 	 * @param string $delay [optional]
+	 * @return void
 	 */
 	public function __construct(string $path, string $delay = 'P7D')
 	{
@@ -62,8 +65,8 @@ class Json
 			# Set the cache filepath
 			$this->source = $path;
 		}
-		catch(Exception $oException) {
-			$this->_bLoadError = true;
+		catch(Exception $e) {
+			$this->_LoadException = $e;
 		}
 	}
 
@@ -74,7 +77,7 @@ class Json
 	 */
 	public function isEnable(): bool
 	{
-		return $this->state;
+		return $this->enabled;
 	}
 
 	/**
@@ -85,7 +88,7 @@ class Json
 	 */
 	public function enable(): Json
 	{
-		$this->setState(true);
+		$this->setStatus(true);
 		return $this;
 	}
 
@@ -97,27 +100,32 @@ class Json
 	 */
 	public function disable(): Json
 	{
-		$this->setState(false);
+		$this->setStatus(false);
 		return $this;
 	}
 
 	/**
 	 * Enable/Disable cache system
 	 *
-	 * @param bool $state
+	 * @param bool $enable
 	 * @return Json
 	 * @throws Exception
 	 */
-	public function setState(bool $state): Json
+	public function setStatus(bool $enable): Json
 	{
-		$this->state = $state;
-		if($state && !$this->path) {
-			$this->path = realpath($this->source);
-			if (!is_dir($this->path)) {
-				if (!@mkdir($this->source, 0777, true)) {
-					throw new Exception("Can't create cache directory : {$this->source}");
+		$this->enabled = $enable;
+		if($enable && !$this->path) {
+			if(!$this->source) {
+				throw new Exception('Cache directory is not set.');
+			}
+			if(!is_dir($this->source)) {
+				if(!mkdir($this->source, 0777, true)) {
+					throw new Exception('Can\'t create cache directory: ' . $this->source);
 				}
-				$this->path = realpath($this->source);
+			}
+			$this->path = (string) realpath($this->source);
+			if(!$this->path) {
+				throw new Exception('Can\'t use realpath cache directory: ' . $this->source);
 			}
 		}
 		return $this;
@@ -130,7 +138,35 @@ class Json
 	 */
 	public function isError(): bool
 	{
-		return $this->_bLoadError || $this->_bGetError || $this->_bSetError;
+		return $this->_LoadException || $this->_GetException || $this->_SetException;
+	}
+
+	/**
+	 * @return Exception|null
+	 */
+	public function getException(): ? Exception
+	{
+		if($this->_LoadException) {
+			return $this->_LoadException;
+		}
+		if($this->_GetException) {
+			return $this->_GetException;
+		}
+		if($this->_SetException) {
+			return $this->_SetException;
+		}
+		return null;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getErrorMessage(): string
+	{
+		if($e = $this->getException()) {
+			return $e->getMessage();
+		}
+		return '';
 	}
 
 	/**
@@ -155,7 +191,7 @@ class Json
 	public function get(string $key)
 	{
 		# Clear
-		$this->_bGetError = false;
+		$this->_GetException = null;
 
 		# Cache disable
 		if(!$this->isEnable()) {
@@ -174,7 +210,9 @@ class Json
 		try {
 			# Read datas
 			$read = file_get_contents($path);
-			if(!$read) { throw new Exception("File content error : $path"); }
+			if(!$read) {
+				throw new Exception('File content error : ' . $path);
+			}
 
 			# Decode
 			$data = json_decode($read, true);
@@ -188,8 +226,8 @@ class Json
 			# Get value
 			return $data['value'] ?? null;
 		}
-		catch(Exception $oException) {
-			$this->_bGetError = true;
+		catch(Exception $e) {
+			$this->_GetException = $e;
 			return null;
 		}
 	}
@@ -206,7 +244,7 @@ class Json
 	public function set(string $key, $data, string $delay = ''): Json
 	{
 		# Clear
-		$this->_bSetError = false;
+		$this->_SetException = null;
 
 		# Cache disable
 		if(!$this->isEnable()) {
@@ -239,8 +277,8 @@ class Json
 			# All access right for all
 			chmod($path, 0777);
 		}
-		catch(Exception $oException) {
-			$this->_bSetError = true;
+		catch(Exception $e) {
+			$this->_SetException = $e;
 		}
 
 		# Maintain chainability
@@ -291,7 +329,9 @@ class Json
 
 		# Delete all
 		foreach($files as $file) {
-			if(is_file($file)) { unlink($file); }
+			if(is_file($file)) {
+				unlink($file);
+			}
 		}
 
 		# Maintain chainability

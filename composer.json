@@ -17,7 +17,8 @@
     ],
     "require": {
         "php": ">=7.0",
-        "symfony/cache": "^3.3"
+        "symfony/cache": "^3.3",
+        "ext-json": "*"
     },
     "require-dev": {},
     "autoload": {
